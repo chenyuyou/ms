@@ -98,7 +98,7 @@ def run():
                        number_processes=cpu_count(),  
                        parameters=br_params,
                        iterations=10,
-                       max_steps=800,
+                       max_steps=100,
 #                       data_collection_period=1000
 #                       model_reporters={"Data Collector": lambda m: m.datacollector}
                        )
