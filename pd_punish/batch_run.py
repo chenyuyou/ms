@@ -29,7 +29,7 @@ class PdNetworkModel(Model):
                       "Random": RandomActivation,
                       "Simultaneous": SimultaneousActivation}
 
-    def __init__(self, num_agents=100, intense=0.1, schedule_type="Random", b=2, c=2, k=1.5, f=1, e=5, noise=0.7, mu=0.00015, t=1, seed=None):    # 删除ratio
+    def __init__(self, num_agents=2000, intense=0.1, schedule_type="Random", b=2, c=2, k=1.5, f=1, e=5, noise=0.7, mu=0.00015, t=1, seed=None):    # 删除ratio
        # 博弈顺序确定
         super().__init__()
         #
@@ -97,9 +97,9 @@ def run():
     br = batch_run(PdNetworkModel,
                        number_processes=cpu_count(),  
                        parameters=br_params,
-                       iterations=1,
-                       max_steps=10000,
-                       data_collection_period=1000
+                       iterations=10,
+                       max_steps=800,
+#                       data_collection_period=1000
 #                       model_reporters={"Data Collector": lambda m: m.datacollector}
                        )
 #    print(br)
