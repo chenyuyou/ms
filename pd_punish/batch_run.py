@@ -14,12 +14,15 @@ def track_run(model):
 
 def cooperate(model):
     return len([a for a in model.schedule.agents if a.move == 0])/model.num_agents
+#    return len([a for a in model.schedule.agents if a.move == 0])
 
 def defect(model):
     return len([a for a in model.schedule.agents if a.move == 1])/model.num_agents
+#    return len([a for a in model.schedule.agents if a.move == 1])
 
 def punish(model):
     return len([a for a in model.schedule.agents if a.move == 2])/model.num_agents
+#    return len([a for a in model.schedule.agents if a.move == 2])
 
 class PdNetworkModel(Model):
 
@@ -82,7 +85,7 @@ def run():
 #    a,b=input
     br_params = {
         'noise':[0.1],
-        'intense':[1],
+        'intense':[0.1],
 #        'b':[a],
 #        'c':[b],
         'b':[16],
@@ -91,15 +94,15 @@ def run():
         'f':[5],
         'e':[5],
 #        'mu':[i/10000 for i in range(0,51,5)]
-        'mu':[0.0001]
+        'mu':[0.01]
     }
 
     br = batch_run(PdNetworkModel,
                        number_processes=cpu_count(),  
                        parameters=br_params,
                        iterations=10,
-                       max_steps=100,
-#                       data_collection_period=1000
+                       max_steps=300,
+                       data_collection_period=10
 #                       model_reporters={"Data Collector": lambda m: m.datacollector}
                        )
 #    print(br)
