@@ -14,28 +14,29 @@ class CapitalGoodFirm(Agent):
     B_LaborProductivity:企业自身所采用的生产技术的劳动生产率。
     Tau:当前的技术年限。
     '''
-    def __init__(self, unique, model, mu1, v, xi, b, zeta1, zeta2, alpha_1, beta_1,
+    def __init__(self, unique, model,
+                 mu1, v, xi, b, zeta1, zeta2, alpha_1, beta_1,
                  alpha_2, beta_2, x1_bar, x1_underline, gamma, iota, eta, v_, omega1, omega2,
                  chi, lambda_, r, phi_1, phi_2, phi_3, phi_4, psi_1, psi_2, psi_3, tr, varphi,
                  Wage, A_LaborProductivity, B_LaborProductivity
                  ) -> None:
         super().__init__(unique, model)
-        self.mu1 = mu1  # 产品售价与成本的比例系数。
+        self.capital_firm_mu1 = mu1  # 产品售价与成本的比例系数。
         self.v = v      # 研发费用占产品线销售额的比例。
         self.xi = xi    # 研发费用中用于创新的比率， 1-xi是研发费用中用于模仿的比率。
-        self.b = b      # 投资的回收周期。
+        self.b = b      # 资本品投资的回收周期。
         self.zeta1 = zeta1  # 企业创新能力搜索参数
         self.zeta2 = zeta2  # 企业模仿能力搜索参数
         self.alpha_1 = alpha_1  # 创新过程Beta分布参数中的alpha
         self.beta_1 = beta_1    # 创新过程Beta分布参数中的beta
         self.alpha_2 = alpha_2  # Beta分布参数中的alpha
         self.beta_2 = beta_2    # Beta分布参数中的beta
-        self.x1_bar = x1_bar
-        self.x1_underline = x1_underline
-        self.gamma = gamma
+        self.x1_bar = x1_bar    # 贝塔分布的支持区间上限。
+        self.x1_underline = x1_underline    # 贝塔分布的支持区间下限。
+        self.gamma = gamma  # 潜在新客户占历史客户的比例系数。
+        self.v_ = v_    # 加成系数
         self.iota = iota    # 期望库存
         self.eta = eta  # 报废周期
-        self.v_ = v_    # 加成系数
         self.omega1 = omega1    # 竞争力权重
         self.omega2 = omega2    # 竞争力权重
         self.chi = chi  # 复制动力学系数
@@ -61,8 +62,6 @@ class CapitalGoodFirm(Agent):
         self.Research_t = 0
         self.Innovation_t = 0
         self.Imitation_t = 0
-        self.SkillImproced_A_t = 0
-        self.SkillImproced_B_t = 0
         self.Tech_A_t = 0
         self.Tech_B_t = 0
         self.TechInnovation_A_t = 0
@@ -107,7 +106,7 @@ class CapitalGoodFirm(Agent):
         返回:
         float: 计算出的价格。
         """
-        self.Price_t = (1 + self.mu1)*self.CostCapital_t
+        self.Price_t = (1 + self.capital_firm_mu1)*self.CostCapital_t
 
     def research_investment(self):
         """
@@ -135,7 +134,7 @@ class CapitalGoodFirm(Agent):
         """
         self.Innovation_t = self.xi * self.Research_t
         self.Imitation_t = (1 - self.xi) * self.Research_t
-####################################################################
+
     def innovation(self):
         """
         模拟创新过程。
@@ -155,8 +154,11 @@ class CapitalGoodFirm(Agent):
         self.Theta_innovation_t = 1 - np.exp(-self.zeta1 * self.Innovation_t)
         Innovation_chance = np.random.binomial(1, self.Theta_innovation_t)
         if Innovation_chance:
-            self.SkillImproced_A_t = np.random.beta(self.alpha_1, self.beta_1) * (self.x1_bar - self.x1_underline) + self.x1_underline
-            self.SkillImproced_B_t = np.random.beta(self.alpha_1, self.beta_1) * (self.x1_bar - self.x1_underline) + self.x1_underline
+            x_i_A = np.random.beta(self.alpha_1, self.beta_1) * (self.x1_bar - self.x1_underline) + self.x1_underline
+            x_i_B = np.random.beta(self.alpha_1, self.beta_1) * (self.x1_bar - self.x1_underline) + self.x1_underline
+            self.TechInnovation_A_t = self.A_LaborProductivity_tau * (1 + x_i_A)
+            self.TechInnovation_B_t = self.B_LaborProductivity_tau * (1 + x_i_B)
+#################################################
 
     def technological_distance(tech1, tech2):
         """
@@ -170,7 +172,7 @@ class CapitalGoodFirm(Agent):
         """
         return np.sqrt((tech1[0] - tech2[0])**2 + (tech1[1] - tech2[1])**2)
 
-    def simulate_imitation(self):
+    def imitation(self):
         """
         模拟模仿过程，考虑技术距离和加权模仿概率。
 
@@ -189,7 +191,7 @@ class CapitalGoodFirm(Agent):
 
         if Imitation_chance and competitors_technologies:
         # 计算与每个竞争对手的技术距离
-            Distances = [calculate_technological_distance(own_technology, tech) for tech in competitors_technologies]
+            Distances = [self.technological_distance(own_technology, tech) for tech in competitors_technologies]
         # 转换为概率（距离越小，概率越高）
             Probabilities = [1 / d if d != 0 else 1.0 for d in Distances]
             Probabilities = np.array(Probabilities) / sum(Probabilities)
@@ -197,7 +199,7 @@ class CapitalGoodFirm(Agent):
             chosen_tech_index = np.random.choice(len(competitors_technologies), p=Probabilities)
             self.TechImitation_A_t, self.TechImitation_B_t = competitors_technologies[chosen_tech_index]
     
-    def choose_machine_to_produce(potential_machines, payback_period_parameter):
+    def choose_machine(potential_machines, payback_period_parameter):
         """
         资本品企业选择生产哪种机器。
 
@@ -213,18 +215,51 @@ class CapitalGoodFirm(Agent):
 
     # 选择总成本最低的机器
         return min(total_costs, key=lambda x: x[0])
+
+    def distribute_brochures(historical_clients, gamma):
+        """
+        计算向潜在新客户发送宣传册的数量。
+
+        参数:
+        historical_clients (int): 历史客户的数量。
+        gamma (float): 潜在新客户占历史客户的比例系数。
+
+        返回:
+        int: 潜在新客户的数量。
+        """
+        potential_new_clients = int(gamma * historical_clients)
+        return potential_new_clients
+
+
 ################################################################################
-
-
-
 class ConsumptionGoodFirm(Agent):
 
-    def __init__(self, unique, Demand, model) -> None:
-        super().__init__(unique, model) 
-        self.Demand = Demand
+    def __init__(self, unique, model, 
+                h, imath, lambda_, r, 
+                ExpectedDemand, Produce, ExpectedInvestment, DesiredCapital, CurrentCapital,
+                ProduceCost, CurrentLiquidAssets, Load, Sale, TotalFinancing, Price,
+                
+                
+                ) -> None:
+        super().__init__(unique, model)
+        self.h = h  # 过去需求覆盖周期长度
+        self.DesiredInventory_imath = imath # 期望库存系数
+        self.DebtSalesRatioLimit_lambda = lambda_   # 债务与销售的比率上限
+        self.InterestRate_r = r # 利率
 
+        self.ExpectedDemand_t = ExpectedDemand  # t期的期望需求
+        self.ExpectedProduce_t = Produce        # t期的期望产量
+        self.ExpectedInvestment_t = ExpectedInvestment  # t期期望投资
+        self.DesiredCapital_t = DesiredCapital  # t期期望资本存量
+        self.CurrentCapital_t = CurrentCapital  # t期当前资本存量
+        self.ProduceCost_t = ProduceCost    # t期生产成本
+        self.CurrentLiquidAssets_t = CurrentLiquidAssets    # t期现有流动资产
+        self.Load_t = Load
+        self.Sale_t = Sale
+        self.TotalFinancing_t = TotalFinancing
+        self.Price_t = Price
 
-    def demand_expectation(past_demands, h):
+    def demand_expectation(self):
         """
         根据适应性需求预期计算预期需求。
 
@@ -235,13 +270,13 @@ class ConsumptionGoodFirm(Agent):
         返回:
         float: 预期需求。
         """
-        if len(past_demands) < h:
+        if len(past_demands) < self.h:
             raise ValueError("提供的过去需求数据少于 h 个时期。")
 
     # 计算过去 h 个时期的需求平均值
-        return sum(past_demands[-h:]) / h
+        self.ExpectedDemand_t = sum(past_demands[-self.h:]) / self.h
 
-    def desired_production_level(expected_demand, desired_inventory_coefficient, actual_inventory_last_period):
+    def desired_production(self):
         """
         计算消费品企业的期望生产水平。
 
@@ -253,9 +288,22 @@ class ConsumptionGoodFirm(Agent):
         返回:
         float: 期望生产水平。
         """
-        desired_inventory = desired_inventory_coefficient * expected_demand
-        return expected_demand + desired_inventory - actual_inventory_last_period
+    #    desired_inventory = self.desired_inventory_imath * self.ExpectedDemand_t
+        self.ExpectedProduce_t = self.ExpectedDemand_t * (1 + self.DesiredInventory_imath) - actual_inventory_last_period
 
+    def desired_investment(self):
+        """
+        计算消费品企业的期望投资额。
+
+        参数:
+        desired_capital_stock (float): 期望的资本存量。
+        current_capital_stock (float): 当前的资本存量。
+
+        返回:
+        float: 期望投资额。
+        """
+        self.ExpectedInvestment_t = max(self.DesiredCapital_t - self.CurrentCapital_t, 0)
+#################
     def replacement_decision(machine_vintages, new_machine_price, new_machine_unit_cost, b):
         """
         计算消费品企业的机器替换决策。
@@ -274,8 +322,79 @@ class ConsumptionGoodFirm(Agent):
             if new_machine_price / (unit_cost - new_machine_unit_cost) <= b:
                 to_replace.append(A_i_tau)
         return to_replace
+    
+    def choose_capital_good_supplier(available_suppliers, b):
+        """
+        选择资本货物供应商。
 
-    def calculate_price(unit_cost, markup):
+        参数:
+        available_suppliers (list of tuples): 可用供应商的信息，格式为 (p_i, A_i_tau, unit_cost)。
+        b (float): 考虑单位生产成本的加权因子。
+
+        返回:
+        tuple: 选择的供应商信息。
+        """
+    # 计算每个供应商的总成本（价格 + 加权单位生产成本）
+        total_costs = [(p_i + b * unit_cost, A_i_tau) for p_i, A_i_tau, unit_cost in available_suppliers]
+
+    # 选择总成本最低的供应商
+        return min(total_costs, key=lambda x: x[0])
+
+##################
+    def finance_investment(self,production_cost, existing_liquid_assets, debt_to_sales_ratio_limit, interest_rate, sales):
+        """
+        模拟消费品企业的投融资决策。
+
+        参数:
+        production_cost (float): 生产成本。
+        existing_liquid_assets (float): 现有的流动资产。
+        debt_to_sales_ratio_limit (float): 债务与销售的比率上限。
+        interest_rate (float): 利率。
+        sales (float): 销售额。
+
+        返回:
+        tuple: (使用的流动资产, 借款金额, 总融资额)
+        """
+        if self.ProduceCost_t <= self.CurrentLiquidAssets_t:
+        # 如果现有流动资产足以覆盖生产成本
+            self.Load_t = 0 
+            return production_cost, 0, production_cost
+        else:
+        # 计算最大借款额度
+            max_borrowing = min(self.Sale_t * self.DebtSalesRatioLimit_lambda, self.ProduceCost_t - self.CurrentLiquidAssets_t)
+            borrowing_cost = max_borrowing * self.InterestRate_r
+            self.TotalFinancing_t = self.CurrentLiquidAssets_t + max_borrowing + borrowing_cost
+            self.Load_t = max_borrowing
+            return existing_liquid_assets, max_borrowing, total_financing
+
+    def average_productivity(self, machines):
+        """
+        计算平均生产率。
+
+        参数:
+        machines (list of tuples): 机器列表，每个元组包含 (生产率, 数量)。
+
+        返回:
+        float: 平均生产率。
+        """
+        total_productivity = sum(production_rate * quantity for production_rate, quantity in machines)
+        total_machines = sum(quantity for _, quantity in machines)
+        return total_productivity / total_machines if total_machines > 0 else 0
+
+    def unit_cost(self, labor_cost, total_production):
+        """
+        计算单位生产成本。
+
+        参数:
+        labor_cost (float): 劳动力成本。
+        total_production (float): 总生产量。
+
+        返回:
+        float: 单位生产成本。
+        """
+        return labor_cost / total_production if total_production > 0 else 0
+
+    def price(self, unit_cost, markup):
         """
         根据单位成本和加成率计算价格。
 
@@ -286,7 +405,7 @@ class ConsumptionGoodFirm(Agent):
         返回:
         float: 计算出的价格。
         """
-        return (1 + markup) * unit_cost
+        self.Price_t =  (1 + markup) * unit_cost
 
     def calculate_markup(last_markup, market_share_last, market_share_before_last, v):
         """
@@ -393,7 +512,9 @@ class ConsumptionGoodFirm(Agent):
 
 
 class Public(Agent):
-    def __init__(self, unique, model) -> None:
+    def __init__(self, unique, model,
+                 
+                ) -> None:
         super().__init__(unique, model) 
 
    
@@ -408,6 +529,10 @@ class Public(Agent):
 
 
 class Public(Agent):
-    def __init__(self, unique, model) -> None:
+    def __init__(self, unique, model,
+                
+                
+                
+                ) -> None:
         super().__init__(unique, model) 
 

@@ -22,12 +22,12 @@ class PdNetworkModel(Model):
 
     id_gen = itertools.count(1)
 
-    def __init__(self, capital_firms=50, num_consumption_firm=200,
+    def __init__(self, capital_firms=50, consumption_firm=200, capital_goods_firm_rule_mu1=0.04,
                  RD_investment_propersity_v=0.04, RD_allocation_xi=0.50,
                  firm_serach_capability_zeta1=0.30, firm_serach_capability_zeta2=0.30,
                  beta_parameter_alpha=3, beta_parameter_beta=3,
                  beta_support_underline=-0.15, beta_support_bar=0.15,
-                 new_customer_sample_gamma=0.50, capital_goos_firm_rule_mu1=0.04,
+                 new_customer_sample_gamma=0.50,
                  desired_inventories_iota=0.10, payback_period_b=3,
                  scrapping_age_eta=20, mark_up_coefficient_v=0.04,
                  competitiveness_weights_omega1=1, competitiveness_weights_omega2=1,
@@ -40,7 +40,24 @@ class PdNetworkModel(Model):
                  tax_rate_tr=0.10, unemployment_subsidy_rate_varphi=0.40,
                  seed=None):
         super().__init__()
-
+        self.capital_firms = capital_firms  # 资本品厂家数
+        self.consumption_firm = consumption_firm    # 消费品厂家数
+        self.capital_goods_firm_rule_mu1 = capital_goods_firm_rule_mu1    # 产品售价与成本的比例系数。
+        self.RD_investment_propersity_v = RD_investment_propersity_v    # 研发费用占产品线销售额的比例。
+        self.RD_allocation_xi = RD_allocation_xi    # 研发费用中用于创新的比率， 1-xi是研发费用中用于模仿的比率。
+        
+        self.firm_serach_capability_zeta1 = firm_serach_capability_zeta1    # 企业创新能力搜索参数
+        self.firm_serach_capability_zeta2 = firm_serach_capability_zeta2    # 企业模仿能力搜索参数
+        self.beta_parameter_alpha = beta_parameter_alpha    # 创新过程Beta分布参数中的alpha
+        self.beta_parameter_beta = beta_parameter_beta  # 创新过程Beta分布参数中的beta
+        self.beta_support_underline = beta_support_underline    # 贝塔分布的支持区间下限。
+        self.beta_support_bar = beta_support_bar    # 贝塔分布的支持区间上限。
+        self.new_customer_sample_gamma = new_customer_sample_gamma  # 潜在新客户占历史客户的比例系数。
+        self.desired_inventories_iota = desired_inventories_iota    # 期望库存
+        
+        self.payback_period_b = payback_period_b  # 投资的回收周期。
+        self.scrapping_age_eta = scrapping_age_eta    # 报废周期
+            # 
 
         # 记录第几次运行模型
         self.uid = next(self.id_gen) 
