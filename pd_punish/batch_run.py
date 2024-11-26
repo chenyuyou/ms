@@ -51,9 +51,7 @@ class PdNetworkModel(Model):
         self.k = k 
         self.c = c
         self.b = b
-#        self.pd_payoff = ((b-c,        -c,      b-c),
-#                          (  b,         0,      b-e),
-#                          (b-c,      -c-f,      b-c))                                      
+                                    
         self.pd_payoff = ((b-c,        -c,      -c-e),
                           (  b,         0,      -e),
                           (b-f,        -f,      -f-e))                                      
@@ -80,20 +78,18 @@ class PdNetworkModel(Model):
         self.datacollector.collect(self)
 
 
-#def run(input):
+
 def run():
-#    a,b=input
+
     br_params = {
         'noise':[0.1],
         'intense':[0.1],
-#        'b':[a],
-#        'c':[b],
         'b':[16],
         'c':[15],
         'k':[6],
         'f':[5],
         'e':[5],
-#        'mu':[i/10000 for i in range(0,51,5)]
+
         'mu':[0.01]
     }
 
@@ -103,21 +99,16 @@ def run():
                        iterations=10,
                        max_steps=300,
                        data_collection_period=10
-#                       model_reporters={"Data Collector": lambda m: m.datacollector}
+
                        )
-#    print(br)
+
     result = pd.DataFrame(br)
     
-#    result.index.names=['noise','intense','b','c','k','f','e','mu','iter','step']
-#    result.index.names=['b','k','f','e','iter','step']
-#    result.to_csv("../"+str(a)+"+"+str(b)+".csv")
+
     result.to_csv("../new.csv")
 
 
 if __name__ == '__main__':
-#    input=[(i+1,i) for i in range(6,16,1)]
-#    for i in input:
-#        run(i)
     start=time.time()
     run()
     end=time.time()
